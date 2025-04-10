@@ -1,0 +1,17 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "backend practice - chai aur code",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start":"node --watch index.js"
+  },
+  "keywords": [
+    "js",
+    "node",
+    "backend"
+  ],
+  "author": "sandesh",
+  "license": "ISC"
+}
