@@ -11,8 +11,9 @@ class ApiError extends Error {
         this.statusCode = statusCode
         this.data = null // this.data is custom property that can hold extra information
         this.message = message
-        this.success = false
-        this.errors = errors
+
+
+         this.errors = errors
 
         // if(stack){
         //     this.stack = stack
