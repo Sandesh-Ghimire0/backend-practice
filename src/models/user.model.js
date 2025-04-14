@@ -53,7 +53,7 @@ const userSchema = new Schema(
     - Middleware (also called "pre/post hooks") in Mongoose are functions that are executed before or after certain operations on MongoDB documents. They allow you to inject custom logic into the document lifecycle.
 
     - This code defines a Mongoose pre-save hook for a User schema that automatically hashes passwords before saving them to the database
-
+  
     - async function: Needed because bcrypt.hash() is asynchronous
     - this: Refers to the document being saved
 
