@@ -8,9 +8,10 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 const generateAccessAndRefreshTokens = async (userId) =>{
     try {
         // here 'user' have access to the method that we have created for the UserSchema in user.model.js
-       const user =  await userId.findById(userId)
+       const user =  await User.findById(userId)
        const accessToken = user.generateAccessToken()
        const refreshToken = user.generateRefreshToken()
+       
 
        // saving the refresh Token in the database
        user.refreshToken = refreshToken
@@ -20,7 +21,8 @@ const generateAccessAndRefreshTokens = async (userId) =>{
 
 
     } catch (error) {
-        throw new ApiError(500, "Failed to generate refresh and access tokens :: error :: ",error)
+        console.log(error)
+        throw new ApiError(500, "Failed to generate refresh and access tokens :: error :: ",error.message)
     }
 }
 
@@ -40,23 +42,28 @@ const registerUser = asyncHandler( async (req, res) => {
     - return response
     */
 
-    const { username, email, fullname, password } = req.body
-
-    if([fullname, email, username, password].some(field => field?.trim() === "")){
-        throw new ApiError(400, "All fields are required")
+   
+   const { username, email, fullname, password } = req.body
+   
+   if([fullname, email, username, password].some(field => field?.trim() === "")){
+       throw new ApiError(400, "All fields are required")
     }
-
+    
     const existedUser = await User.findOne({
         $or:[{username},{email}]
     })
     if(existedUser){
         throw new ApiError(409, "User with email or username already exist")
     }
-
-    const avatarLocalPath = req.files?.avatar[0]?.path
+    
+    // const avatarLocalPath = req.files?.avatar[0]?.path
     // const coverImageLocalPath =  req.files?.coverImage[0]?.path
-    // console.log(coverImageLocalPath)
-
+    
+    // above code throws an error: cannot read the propeties of undefined reading 0 so doing in this way
+    let avatarLocalPath;
+    if(req.files && Array.isArray(req.files.avatar) && req.files.avatar.length > 0){
+        avatarLocalPath = req.files.avatar[0].path
+    }
     let coverImageLocalPath;
     if(req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0){
         coverImageLocalPath = req.files.coverImage[0].path
@@ -88,6 +95,8 @@ const registerUser = asyncHandler( async (req, res) => {
         "-password -refreshToken"
     )
 
+    console.log(createdUser)
+
     if(!createdUser){
         throw new ApiError(500, "something went wrong while registering the user")
     }
@@ -116,7 +125,7 @@ const loginUser = asyncHandler( async (req, res) => {
 
     const {username, email, password} = req.body
 
-    if(!username || !email){
+    if(!(username || email)){
         throw new ApiError(400, "username or email is required")
     }
 
@@ -129,6 +138,7 @@ const loginUser = asyncHandler( async (req, res) => {
     }
 
     const isPasswordValid =  await user.isPasswordCorrect(password)
+
     if(!isPasswordValid){
         throw new ApiError(401, "Invalid user password")
     }
@@ -170,6 +180,7 @@ const logoutUser = asyncHandler( async (req, res)=>{
     // here we needed the access to the logged in user data for that we created the middleware
     // we could have wrote all the code of auth.middleware here but there might be the case where we need to authenticate the user in multiple places using accessToken so we created the middleware to verify the token and get the user after verification
 
+    console.log(req.user?._id)
     await User.findByIdAndUpdate(
         req.user?._id,
         {
@@ -184,7 +195,7 @@ const logoutUser = asyncHandler( async (req, res)=>{
 
     const options = {
         httpOnly: true,
-        secure: true,e
+        secure: true
     }
 
     // clearing the cookie after logout

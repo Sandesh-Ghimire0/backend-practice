@@ -2,7 +2,7 @@
 // middleware helps to do some task before going to the server.
 // it adds some properties in the request object
 
-import { User } from "../models/user.model";
+import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from 'jsonwebtoken'
@@ -16,7 +16,7 @@ export const verifyJWT = asyncHandler(async (req, _ , next) => {
     //                   for browser                 for mobile apps or postman 
     const accessToken =  req.cookies?.accessToken || req.header('Authorization').replace('Bearer ','')
 
-    if(!token){
+    if(!accessToken){
         throw new ApiError(401, 'Unauthorized Access')
     }
 
@@ -25,6 +25,7 @@ export const verifyJWT = asyncHandler(async (req, _ , next) => {
     const user = await User.findById(decodedToken?._id).select(
         "-password -refreshToken"
     )
+    console.log(user)
 
     if(!user){
         // TODO: discuss about frontend
