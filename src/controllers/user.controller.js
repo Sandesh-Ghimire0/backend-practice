@@ -5,6 +5,26 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
 
+const generateAccessAndRefreshTokens = async (userId) =>{
+    try {
+        // here 'user' have access to the method that we have created for the UserSchema in user.model.js
+       const user =  await userId.findById(userId)
+       const accessToken = user.generateAccessToken()
+       const refreshToken = user.generateRefreshToken()
+
+       // saving the refresh Token in the database
+       user.refreshToken = refreshToken
+       await user.save({validateBeforeSave: false})
+
+       return {accessToken, refreshToken}
+
+
+    } catch (error) {
+        throw new ApiError(500, "Failed to generate refresh and access tokens :: error :: ",error)
+    }
+}
+
+// use asyncHandler when we are handling web request only don't use it for the methods which we need internally for the server for e.g. don't use for generateAccessAndRefreshTokens() method
 const registerUser = asyncHandler( async (req, res) => {
     /*
     steps:-
@@ -57,13 +77,13 @@ const registerUser = asyncHandler( async (req, res) => {
     const user = await User.create({
         fullname:fullname,
         avatar:avatar.url,
-        coverImage: coverImage?.url || "",
+        coverImage: coverImage?.url || "", // coverImage is not required show we need optional chaining to get url if their is coverImage
         email,
         password,
         username:username.toLowerCase()
     })
 
-    console.log(user)
+    // we have to return the API response without password and refreshToken
     const createdUser =await User.findById(user._id).select(
         "-password -refreshToken"
     )
@@ -86,4 +106,100 @@ const registerUser = asyncHandler( async (req, res) => {
 })
 
 
-export {registerUser}
+const loginUser = asyncHandler( async (req, res) => {
+    // req body -> user
+    // username and email
+    // find user
+    // check password
+    // access and refresh token
+    // send cookie
+
+    const {username, email, password} = req.body
+
+    if(!username || !email){
+        throw new ApiError(400, "username or email is required")
+    }
+
+    const user = await User.findOne({
+        $or:[{username},{email}]
+    })
+
+    if(!user){
+        throw new ApiError(404, "user does not exist")
+    }
+
+    const isPasswordValid =  await user.isPasswordCorrect(password)
+    if(!isPasswordValid){
+        throw new ApiError(401, "Invalid user password")
+    }
+
+    const {accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id)
+
+    // removing the unnecessary fields from the user    
+    const loggedInUser = await User.findById(user._id).select(
+        "-password -refreshToken"
+    )
+
+    // designing cookies
+    const options = {
+        httpOnly: true,
+        secure: true, // this two properties disables the cookie to be modified from the frontend 
+        // the server can only modify cookie
+    }
+
+    return res
+    .status(200)
+    .cookie("accessToken",accessToken,options) // we can access cookie because of middleware we defined in app.js
+    .cookie("refreshToken",refreshToken,options)
+    .json(
+        new ApiResponse(
+            200,
+            {
+                user:loggedInUser, accessToken, refreshToken
+                // passing token is optional we are doing this in case user themself want to save tokens in the localStorage or something else
+            },
+            "User logged in successfully"
+        )
+    )
+
+
+})
+
+
+const logoutUser = asyncHandler( async (req, res)=>{
+    // here we needed the access to the logged in user data for that we created the middleware
+    // we could have wrote all the code of auth.middleware here but there might be the case where we need to authenticate the user in multiple places using accessToken so we created the middleware to verify the token and get the user after verification
+
+    await User.findByIdAndUpdate(
+        req.user?._id,
+        {
+            $set:{
+                refreshToken:undefined
+            }
+        },
+        {
+            new: true
+        }
+    )
+
+    const options = {
+        httpOnly: true,
+        secure: true,e
+    }
+
+    // clearing the cookie after logout
+    return res
+    .status(200)
+    .clearCookie('accessToken',options)
+    .clearCookie('refreshToken', options)
+    .json(
+        new ApiResponse(200, {}, "User logged out!!!!!!")
+    )
+})
+
+
+export {
+    registerUser,
+    loginUser,
+    logoutUser
+}

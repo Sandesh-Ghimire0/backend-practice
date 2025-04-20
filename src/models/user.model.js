@@ -79,6 +79,7 @@ userSchema.pre('save',async function (next){
  userSchema.methods.generateAccessToken = function(){
     return jwt.sign(
         {
+            // this information are used to create token or it our payload
             _id:this._id,
             email:this.email,
             username:this.username,
