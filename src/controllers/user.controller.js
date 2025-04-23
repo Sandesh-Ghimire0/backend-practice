@@ -211,6 +211,20 @@ const logoutUser = asyncHandler( async (req, res)=>{
 
 
 const refreshAccessToken = asyncHandler( async (req, res)=>{
+
+    /*
+        - Extracts the Refresh Token
+        - Validates the Refresh Token
+        - Checks if the Token Belongs to a Real User
+            Ensures the user exists in the database.
+
+        - Checks Token Match
+            Compares the incoming token with the one stored in the user’s record to detect token reuse.
+            
+        - Generates Fresh Tokens
+        -Sends Them Back as Secure Cookies + JSON
+        
+    */
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
 
     if(!incomingRefreshToken){
